@@ -4,7 +4,13 @@ use aptos_framework::event;
 use std::string::String;
 use aptos_std::table::Table;
 use std::signer;
-use aptos_std::table::{Self, Table}; // This one we already have, need to modify it
+use aptos_std::table::{Self}; // This one we already have, need to modify it
+use aptos_framework::account;
+
+// Errors
+const E_NOT_INITIALIZED: u64 = 1;
+const ETASK_DOESNT_EXIST: u64 = 2;
+const ETASK_IS_COMPLETED: u64 = 3;
 
 
 
@@ -45,6 +51,8 @@ use aptos_std::table::{Self, Table}; // This one we already have, need to modify
     public entry fun create_task(account: &signer, content: String) acquires TodoList {
         // gets the signer address
         let signer_address = signer::address_of(account);
+        // assert signer has created a list
+        assert!(exists<TodoList>(signer_address), E_NOT_INITIALIZED);
         // gets the TodoList resource 
         let todo_list = borrow_global_mut<TodoList>((signer_address));
         // increment task counter
@@ -61,11 +69,27 @@ use aptos_std::table::{Self, Table}; // This one we already have, need to modify
         // set the task counter to be the incremented counter
         todo_list.task_counter = counter;
         // fires a new task created event
-        event:: emit_event<Task>{
+        event::emit_event<Task>(
         &mut borrow_global_mut<TodoList>(signer_address).set_task_event,
         new_task,
-        }
+    );
     }
 
+    public entry fun complete_task(account: &signer, isCompleted: bool, task_id:u64) acquires TodoList {
+        // gets the signer address
+        let signer_address = signer::address_of(account);
+        // assert signer has created a list
+        assert!(exists<TodoList>(signer_address), E_NOT_INITIALIZED);
+        // gets the TodoList resource
+        let todo_list = borrow_global_mut<TodoList>(signer_address);
+        // assert task exists
+        assert!(table::contains(&todo_list.tasks, task_id), ETASK_DOESNT_EXIST);
+        // gets the task matched the task_id
+        let task_record = table::borrow_mut(&mut todo_list.tasks, task_id);
+        // assert task is not completed
+        assert!(task_record.completed == false, ETASK_IS_COMPLETED);
+        // update task as completed
+        task_record.completed = isCompleted;
+    }
 
 }
