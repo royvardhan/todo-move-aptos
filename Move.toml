@@ -3,7 +3,7 @@ name = 'my-todo-list'
 version = '1.0.0'
 [dependencies.AptosFramework]
 git = 'https://github.com/aptos-labs/aptos-core.git'
-rev = 'main'
+rev = 'devnet'
 subdir = 'aptos-move/framework/aptos-framework'
 [addresses]
 todolist_addr='35a0a7b853bdd85084bd590a635d39ba24f9438ef9fb28518e996a7e339ccfc1'
