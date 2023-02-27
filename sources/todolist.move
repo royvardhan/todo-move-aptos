@@ -1,16 +1,18 @@
 module todolist_addr::todolist {
 
-use aptos_framework::event;
-use std::string::String;
-use aptos_std::table::Table;
-use std::signer;
-use aptos_std::table::{Self}; // This one we already have, need to modify it
-use aptos_framework::account;
+    use aptos_framework::account;
+    use std::signer;
+    use aptos_framework::event;
+    use std::string::String;
+    use aptos_std::table::{Self, Table};
+    #[test_only]
+    use std::string;
 
-// Errors
-const E_NOT_INITIALIZED: u64 = 1;
-const ETASK_DOESNT_EXIST: u64 = 2;
-const ETASK_IS_COMPLETED: u64 = 3;
+
+    // Errors
+    const E_NOT_INITIALIZED: u64 = 1;
+    const ETASK_DOESNT_EXIST: u64 = 2;
+    const ETASK_IS_COMPLETED: u64 = 3;
 
 
 
@@ -91,5 +93,51 @@ const ETASK_IS_COMPLETED: u64 = 3;
         // update task as completed
         task_record.completed = isCompleted;
     }
+
+    #[test(admin = @0x123)]
+    public entry fun test_flow(admin: signer) acquires TodoList {
+        // create a list
+        // create a task
+        // update task as completed
+
+        // creates an admin @todolist_addr account for test
+        account::create_account_for_test(signer::address_of(&admin));
+        // initialize contract with admin account
+        create_list(&admin);
+
+        //creates a task by the admin acoount
+
+        create_task(&admin, string::utf8(b"New Task"));
+
+        let task_count = event::counter(&borrow_global<TodoList>(signer::address_of(&admin)).set_task_event);
+        assert!(task_count == 1, 4);
+
+        let todo_list = borrow_global<TodoList>(signer::address_of(&admin));
+        assert!(todo_list.task_counter == 1, 5);
+
+        let task_record = table::borrow(&todo_list.tasks, todo_list.task_counter);
+        assert!(task_record.task_id == 1, 6);
+        assert!(task_record.completed == false, 7);
+        assert!(task_record.content == string::utf8(b"New Task"), 8);
+        assert!(task_record.address == signer::address_of(&admin), 9);
+
+        // updates task as completed
+        complete_task(&admin, true,  1);
+        let todo_list = borrow_global<TodoList>(signer::address_of(&admin));
+        let task_record = table::borrow(&todo_list.tasks, 1);
+        assert!(task_record.task_id == 1, 10);
+        assert!(task_record.completed == true, 11);
+        assert!(task_record.content == string::utf8(b"New Task"), 12);
+        assert!(task_record.address == signer::address_of(&admin), 13);
+    }
+
+    #[test(admin = @0x123)]
+    #[expected_failure(abort_code = E_NOT_INITIALIZED)]
+    public entry fun account_can_not_update_task(admin: signer) acquires TodoList {
+        // creates an admin @todolist_addr account for test
+        account::create_account_for_test(signer::address_of(&admin));
+        // account can not toggle task as no list was created
+        complete_task(&admin, true, 2);
+}
 
 }
